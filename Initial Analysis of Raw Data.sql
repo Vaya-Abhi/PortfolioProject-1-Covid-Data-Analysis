@@ -39,18 +39,39 @@ ORDER BY 4 DESC;
 
 SELECT Location, MAX(total_deaths) as TotalDeaths
 FROM CovidPortfolio.dbo.CovidDeaths
---WHERE Continent = 'North America'
 GROUP BY location
 ORDER BY 2 DESC;
 
 /* After running the above script, it was observed that Location field 
-had some values other than countries. So, we will create a view to exlude those values. */
+had some values other than countries (continent value is also NULL). So, we will create a view to exlude those values.
+
+World	6915273
+High income	2866033
+Upper middle income	2656109
+Europe	2054189
+Asia	1630017
+
+ */
+
+-- Create a view with filtered results by location
+
+CREATE VIEW [dbo].[CovidDeathFilteredCountry]
+AS
+SELECT iso_code, continent, location, date, population, total_cases, new_cases, new_cases_smoothed, total_deaths, new_deaths, new_deaths_smoothed, total_cases_per_million, new_cases_per_million, new_cases_smoothed_per_million, total_deaths_per_million, 
+             new_deaths_per_million, new_deaths_smoothed_per_million, reproduction_rate, icu_patients, icu_patients_per_million, hosp_patients, hosp_patients_per_million, weekly_icu_admissions, weekly_icu_admissions_per_million, weekly_hosp_admissions, 
+             weekly_hosp_admissions_per_million
+FROM   dbo.CovidDeaths
+WHERE continent IS NOT NULL
+GO
+
+-- Using the new view for previous script (MAX Death Count till date)
+
 
 SELECT Location, MAX(total_deaths) as TotalDeaths
 FROM CovidDeathFilteredCountry
---WHERE Continent = 'North America'
 GROUP BY location
 ORDER BY 2 DESC;
+
 
 -- Total Deaths by Continent
 
@@ -59,59 +80,12 @@ FROM CovidDeathFilteredCountry
 GROUP BY continent
 ORDER BY 2 DESC
 
--- Global Cases
---SET ARITHABORT OFF;
---SET ANSI_WARNINGS OFF;
+-- Global death rate (DeathPercentage)
+
 SELECT SUM(new_cases) as TotalCases, SUM(new_deaths) as TotalDeaths, 
 		SUM(New_Deaths)/SUM(new_cases)*100 as DeathPercentage
 FROM CovidDeathFilteredCountry
 GROUP BY Date
 ORDER BY date
 
--- ----- Vaccination Rate by countries over time
-
-SELECT continent, location, date, population, people_vaccinated, ROUND(people_vaccinated/population*100, 2) as 'VaccinationRate'
-FROM FilteredCombinedData
-WHERE total_vaccinations/population IS NOT NULL
-ORDER BY location, date DESC
-
-/*
-Observations from above analysis:
-
-1. Location column consists values other than country that need to be removed (Continent value is NULL for such columns)
-2. DateTime column needs to be converted to just the date as the time component isnt required
-
-Potential views/stats required for visualizations:
-
-1. Global cases
-2. Cases by continents
-3. Cases by countries in descending order
-4. Global Vaccines
-5. Vaccines by countries
-6. Deaths by countries
-7. Global deaths
-8. Death, Infection, Vaccination rates
-
-*/
-
--- Changes made as per Observations
-
-SELECT continent, Location, CAST(date as date) as Date, Population, 
-		Total_cases, New_cases, total_deaths, new_deaths, hosp_patients
-FROM CovidDeaths
-WHERE continent IS NOT NULL
-
-
-SELECT continent, Location, CAST(date as date) as Date, total_tests,
-		new_tests, positive_rate, total_vaccinations, people_vaccinated
-FROM CovidVaccines
-WHERE continent IS NOT NULL
-
--- ----
-
--- 1. Global cases (population vs infections)
-
-SELECT location, date, total_cases, population, ROUND((total_cases/population)*100, 4) as InfectionRate
-FROM CovidPortfolio.dbo.CovidDeaths
-ORDER BY 1,2;
 
